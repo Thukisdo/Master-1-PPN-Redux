@@ -22,10 +22,10 @@ public:
    * @brief Load a dataset from a DatasetInfo, optionally loading only a subset of the images
    * @param dataset_info The DatasetInfo associated with the dataset
    * @param begin The starting index of the images to load
-   * @param end The starting index of the images to load. If -1, load all the images from begin to
+   * @param end The starting index of the images to load. If 0, load all the images from begin to
    * the end of the dataset
    */
-  explicit Dataset(const DatasetInfo& dataset_info, int begin = 0, int end = -1);
+  explicit Dataset(const DatasetInfo& dataset_info, unsigned int begin = 0, unsigned int end = 0);
 
   /**
    * @brief Load a dataset from a DatasetInfo, and split it into two dataset for training and

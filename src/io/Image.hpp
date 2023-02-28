@@ -5,22 +5,6 @@
 #include <memory>
 #include <optional>
 
-
-class ImageInfo {
-public:
-  ImageInfo(const std::filesystem::path& image_path, int unique_id, int label_id);
-
-  int getLabelId() const;
-  int getUniqueId() const;
-  const std::filesystem::path& getPath() const;
-
-private:
-  std::filesystem::path image_path;
-  int unique_id = -1;
-  int label_id = -1;
-};
-
-
 class Image {
 public:
   static std::optional<Image> load(const std::filesystem::path& filename, int nchannels = 0);

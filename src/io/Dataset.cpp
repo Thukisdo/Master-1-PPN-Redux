@@ -8,7 +8,7 @@
 
 namespace {
 
-  bool check_range_is_valid(const DatasetInfo& info, int begin, int end) {
+  bool check_range_is_valid(const DatasetInfo& info, unsigned int begin, unsigned int end) {
     if (begin >= info.getImagesInfo().size()) return false;
 
     if (end > info.getImagesInfo().size()) return false;
@@ -18,8 +18,9 @@ namespace {
     return true;
   }
 
-  std::pair<std::vector<Image>, std::vector<int>> load_image_in_range(const DatasetInfo& info,
-                                                                      int begin, int end) {
+  std::pair<std::vector<Image>, std::vector<int>>
+  load_image_in_range(const DatasetInfo& info, unsigned int begin, unsigned int end) {
+
     std::vector<Image> image_buffer(end - begin);
     std::vector<int> image_ids(end - begin);
 
@@ -27,8 +28,8 @@ namespace {
 
     // Load the images in parallel, but store them in a temporary buffer
     // So we can remove the images that failed to load
-#pragma omp parallel for schedule(dynamic) reduction(+ : errors)
-    for (int i = begin; i < end; i++) {
+#pragma omp parallel for default(none) schedule(dynamic) reduction(+ : errors) firstprivate(begin, end) shared(image_buffer, image_ids, info)
+    for (unsigned int i = begin; i < end; i++) {
       const ImageInfo& curr_info = info.getImagesInfo()[i];
       auto loaded_image = Image::load(curr_info.getPath(), 1);
 
@@ -110,10 +111,10 @@ namespace {
 
 }// namespace
 
-Dataset::Dataset(const DatasetInfo& info, int begin, int end) {
+Dataset::Dataset(const DatasetInfo& info, unsigned int begin, unsigned int end) {
 
 
-  if (end == -1) { end = info.getImagesInfo().size(); }
+  if (end == 0) { end = info.getImagesInfo().size(); }
 
   if (not check_range_is_valid(info, begin, end)) {
     spdlog::error("Dataset: invalid range [{}, {})", begin, end);
@@ -149,7 +150,8 @@ std::pair<Dataset, Dataset> Dataset::load_and_split(const DatasetInfo& info, flo
   std::shuffle(image_ids.begin(), image_ids.end(), std::mt19937{std::random_device{}()});
 
   // Take the first 10% of the images for the test set
-  int split_index = image_ids.size() * split_ratio;
+  unsigned int split_index = (int) ((float) image_ids.size() * split_ratio);
+
   Dataset test_set(info, 0, split_index);
   Dataset train_set(info, split_index, image_ids.size());
 

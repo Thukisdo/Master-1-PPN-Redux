@@ -1,12 +1,13 @@
 #pragma once
 #include "Image.hpp"
+#include "ImageInfo.hpp"
 #include <filesystem>
 #include <optional>
 #include <vector>
 
 /**
- * @brief Contains information about a Dataset, including its size, the label of each image, and
- * basic information about each image
+ * @brief Contains information about a Dataset, including its size, the label and
+ * ImageInfo of each Image,
  */
 class DatasetInfo {
 public:
@@ -40,7 +41,11 @@ public:
    * @return The root path of the dataset
    */
   std::filesystem::path& getRootPath();
-  const std::filesystem::path& getRootPath() const;
+
+  /**
+   * @return The root path of the dataset
+   */
+  [[nodiscard]] const std::filesystem::path& getRootPath() const;
 
   /**
    * @return A vector of strings containing the labels of the dataset
@@ -50,22 +55,22 @@ public:
   /**
    * @return A vector of strings containing the labels of the dataset
    */
-  const std::vector<std::string>& getLabels() const;
+  [[nodiscard]] const std::vector<std::string>& getLabels() const;
 
   /**
    * @return The ImageInfo associated with each image in the dataset
    */
   std::vector<ImageInfo>& getImagesInfo();
 
-    /**
+  /**
    * @return The ImageInfo associated with each image in the dataset
    */
-  const std::vector<ImageInfo>& getImagesInfo() const;
+  [[nodiscard]] const std::vector<ImageInfo>& getImagesInfo() const;
 
   /**
    * @return True if the dataset is an archive, false otherwise
    */
-  bool isArchive() const { return is_archive; }
+  [[nodiscard]] bool isArchive() const { return is_archive; }
 
 private:
   /**
