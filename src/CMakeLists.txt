@@ -3,7 +3,7 @@
 add_library(common INTERFACE
         global.h
         type.h
-)
+        )
 target_include_directories(common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_subdirectory(image)
