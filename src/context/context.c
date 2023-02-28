@@ -4,7 +4,7 @@
 
 // https://github.com/hyperrealm/libconfig/blob/master/examples/c/example1.c
 
-int load_context(Context* context, char* filename) {
+int load_context(Context* context, const char* filename) {
 
   config_t cfg;
   config_setting_t* setting;

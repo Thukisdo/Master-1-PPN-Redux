@@ -6,14 +6,20 @@ add_library(common INTERFACE
         )
 target_include_directories(common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
+add_subdirectory(io)
 add_subdirectory(image)
 add_subdirectory(convolution_neural_network)
 add_subdirectory(context)
 
 
 # Main executable for the project
-add_executable(main main.c)
-target_link_libraries(main PRIVATE common image convolution_neural_network context)
+add_executable(main main.cpp)
+target_link_libraries(main PRIVATE
+        common image convolution_neural_network context
+        spdlog::spdlog
+        io
+        )
+
 set_target_properties(main PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 

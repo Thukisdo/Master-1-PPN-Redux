@@ -12,7 +12,7 @@
 #define STRING_SIZE 50
 
 typedef struct {
-  char* context_path;
+  const char* context_path;
 
   // ouput
   char* storage_dir;
@@ -42,6 +42,6 @@ typedef struct {
 
 } Context;
 
-int load_context(Context* context, char* filename);
+int load_context(Context* context, const char* filename);
 int info_context(Context* context);
 int free_context(Context* context);

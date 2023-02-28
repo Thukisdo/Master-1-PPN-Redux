@@ -1,37 +1,73 @@
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
+#include <filesystem>
+#include <iostream>
+#include <spdlog/spdlog.h>
+#include "DatasetInfo.hpp"
 
+// C headers
 
-#include "../src/type.h"
-#include "context.h"
-#include "convolution_layer.h"
-#include "dataset_manager.h"
-#include "evaluation.h"
-#include "neural_network.h"
-#include "store.h"
-#include "training.h"
+extern "C" {
+  #include "context.h"
+  #include "dataset_manager.h"
+  #include "neural_network.h"
+  #include "store.h"
+  #include "training.h"
+  #include "type.h"
+}
 
 #define NB_MAX_LAYER 50
 #define NB_MAX_OUTPUTS 50
 
 
-/*  NN-training function, calling previously defined functions
-    The function starts by loading the "train" dataset and
-    proccessing all its files.
+namespace fs = std::filesystem;
 
-    It then feeds them to the NN one by one, recording the error produced at the output
-    and backpropagating it
-    (this part is repeated train_max times)
-*/
+
+std::string get_timestamp() {
+  auto now = std::chrono::system_clock::now();
+  auto in_time_t = std::chrono::system_clock::to_time_t(now);
+  std::stringstream ss;
+  ss << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d_%H_%M_%S");
+  return ss.str();
+}
+
+
 int main(int argc, char* argv[]) {
 
+  spdlog::set_level(spdlog::level::debug);
+
+  spdlog::info("Neural network trainer Version TBD");
+
+  if (argc < 2) {
+    spdlog::error("usage {} <config_file> (result_directory)", argv[0]);
+    return 1;
+  }
+
+  fs::path config_path(argv[1]);
+
+  if (not fs::exists(config_path)) {
+    spdlog::error("config file {} does not exist", config_path.string());
+    return 1;
+  }
+
+  fs::path result_path;
+  if (argc > 2) {
+    result_path = argv[2];
+  } else {
+    result_path = config_path.parent_path() / "results";
+  }
+
+  // TODO: Refactor the context into an experiment configuration
   Context context;
-  load_context(&context, "../data/config.cfg");
+  load_context(&context, config_path.string().c_str());
   info_context(&context);
 
+  // Placeholder
+  auto dataset_info = DatasetInfo::load("../../dataset");
+  auto training_set, testing_set = Dataset::load_and_split(dataset_info, context.test_ratio);
+
+  // spdlog::info("Training set size: {}", training_set.size());
+  // spdlog::info("Testing set size: {}", testing_set.size());
+
+  exit(1);
 
   srand(time(NULL));
 
@@ -64,8 +100,8 @@ int main(int argc, char* argv[]) {
   // TODO la taille du dataset est mise au max theorique d'element et non au nombre reel d'element
   train_dataset.size = num_folder * max_per_folder;
   test_dataset.size = num_folder * max_per_folder;
-  train_dataset.images = malloc(train_dataset.size * sizeof(mri_image));
-  test_dataset.images = malloc(test_dataset.size * sizeof(mri_image));
+  train_dataset.images = (mri_image*) malloc(train_dataset.size * sizeof(mri_image));
+  test_dataset.images = (mri_image*) malloc(test_dataset.size * sizeof(mri_image));
 
   // u64 * random_pattern = malloc( num_folder * max_per_folder * sizeof(u64));
 
