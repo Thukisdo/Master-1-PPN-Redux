@@ -1,18 +1,18 @@
+#include "Dataset.hpp"
+#include "DatasetInfo.hpp"
 #include <filesystem>
 #include <iostream>
 #include <spdlog/spdlog.h>
-#include "DatasetInfo.hpp"
-#include "Dataset.hpp"
 
 // C headers
 
 extern "C" {
-  #include "context.h"
-  // #include "dataset_manager.h"
-  #include "neural_network.h"
-  #include "store.h"
-  // #include "training.h"
-  #include "type.h"
+#include "context.h"
+// #include "dataset_manager.h"
+#include "neural_network.h"
+#include "store.h"
+// #include "training.h"
+#include "type.h"
 }
 
 #define NB_MAX_LAYER 50
@@ -68,7 +68,11 @@ int main(int argc, char* argv[]) {
   spdlog::info("Training set size: {}", training_set.getSize());
   spdlog::info("Testing set size: {}", testing_set.getSize());
 
-  training_set.enforceEqualLabelDistributionn();
+  training_set.enforceEqualLabelDistribution();
+
+  spdlog::info("Training set size: {}", training_set.getSize());
+  spdlog::info("Testing set size: {}", testing_set.getSize());
+
 
   exit(1);
   /*

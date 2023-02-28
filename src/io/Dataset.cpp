@@ -18,14 +18,15 @@ namespace {
     return true;
   }
 
-  std::vector<Image> load_image_in_range(const DatasetInfo& info, int begin, int end) {
+  std::pair<std::vector<Image>, std::vector<int>> load_image_in_range(const DatasetInfo& info,
+                                                                      int begin, int end) {
     std::vector<Image> image_buffer(end - begin);
+    std::vector<int> image_ids(end - begin);
 
-    // TODO: Add support for loading image from an archive
     size_t errors = 0;
 
     // Load the images in parallel, but store them in a temporary buffer
-// So we can remove the images that failed to load
+    // So we can remove the images that failed to load
 #pragma omp parallel for schedule(dynamic) reduction(+ : errors)
     for (int i = begin; i < end; i++) {
       const ImageInfo& curr_info = info.getImagesInfo()[i];
@@ -37,6 +38,7 @@ namespace {
       }
 
       image_buffer[i - begin] = std::move(*loaded_image);
+      image_ids[i - begin] = curr_info.getUniqueId();
     }
 
 
@@ -45,7 +47,8 @@ namespace {
               "Dataset: failed to load {} images, see above for the list of images that failed "
               "to load",
               errors);
-    return image_buffer;
+
+    return {std::move(image_buffer), std::move(image_ids)};
   }
 
 
@@ -78,11 +81,37 @@ namespace {
                   train_set.getImages().end(), resize_lambda);
   }
 
+
+  /**
+   * @brief Find the label with the least number of images, and return its size if it is different
+   * from the number of images in the other labels
+   *
+   * @param nlabel The total number of labels in the dataset
+   * @param labels A vector containing the label of each image
+   * @return 0 if all labels contain the same number of images, otherwise the number of images in
+   * the label with the least number of images
+   */
+  int find_smallest_label_if_different(unsigned int nlabel, const std::vector<int>& labels) {
+
+    std::vector<int> num_images_per_label(nlabel, 0);
+
+    for (int label: labels) { num_images_per_label[static_cast<int>(label)]++; }
+
+    int min_num_images =
+            *std::min_element(num_images_per_label.begin(), num_images_per_label.end());
+
+    // No need to enforce the distribution if all the labels have the same number of images
+    if (std::all_of(num_images_per_label.begin(), num_images_per_label.end(),
+                    [min_num_images](int x) { return x == min_num_images; }))
+      return 0;
+
+    return min_num_images;
+  }
+
 }// namespace
 
 Dataset::Dataset(const DatasetInfo& info, int begin, int end) {
 
-  labels_names = info.getLabels();
 
   if (end == -1) { end = info.getImagesInfo().size(); }
 
@@ -91,31 +120,33 @@ Dataset::Dataset(const DatasetInfo& info, int begin, int end) {
     return;
   }
 
-  std::vector<Image> image_buffer = load_image_in_range(info, begin, end);
+  auto [image_buffer, image_ids] = load_image_in_range(info, begin, end);
+  const auto& images_info = info.getImagesInfo();
 
   // Remove the images that failed to load and create the final dataset
-  for (int i = 0; i < image_buffer.size(); i++) {
+  for (unsigned int i = 0; i < image_buffer.size(); i++) {
     auto& image = image_buffer[i];
 
     if (image.data() == nullptr) continue;
 
-    const auto& curr_info = info.getImagesInfo()[i];
-    int curr_id = info.getImagesInfo()[i].getId();
+    int curr_id = image_ids[i];
 
     images.emplace_back(std::move(image));
     image_id.emplace_back(curr_id);
-    image_info[curr_id] = &curr_info;
+    labels.emplace_back(images_info[curr_id].getLabelId());
   }
+
+  labels_names = info.getLabels();
 }
 
 std::pair<Dataset, Dataset> Dataset::load_and_split(const DatasetInfo& info, float split_ratio) {
   std::vector<int> image_ids;
-  for (const auto& image_info: info.getImagesInfo()) { image_ids.push_back(image_info.getId()); }
+  for (const auto& image_info: info.getImagesInfo()) {
+    image_ids.push_back(image_info.getUniqueId());
+  }
 
   // Shuffle the image ids
-  std::random_device rd;
-  std::mt19937 g(rd());
-  std::shuffle(image_ids.begin(), image_ids.end(), g);
+  std::shuffle(image_ids.begin(), image_ids.end(), std::mt19937{std::random_device{}()});
 
   // Take the first 10% of the images for the test set
   int split_index = image_ids.size() * split_ratio;
@@ -124,51 +155,55 @@ std::pair<Dataset, Dataset> Dataset::load_and_split(const DatasetInfo& info, flo
 
   resize_to_max_dim(test_set, train_set);
 
-  return {std::move(test_set), std::move(train_set)};
+  return {std::move(train_set), std::move(test_set)};
 }
 
-void Dataset::enforceEqualLabelDistribution() {
-  std::vector<int> num_images_per_label(labels_names.size(), 0);
+int Dataset::enforceEqualLabelDistribution() {
+  int target_size = find_smallest_label_if_different(labels_names.size(), labels);
 
-  for (int i = 0; i < image_id.size(); i++) {
-    int label = labels[i];
-    num_images_per_label[label]++;
-  }
+  if (target_size == 0) return 0;
 
-  int min_num_images = *std::min_element(num_images_per_label.begin(), num_images_per_label.end());
+  // Number of images left to pick per label to reach the target size
+  std::vector<int> leftover_per_label(labels_names.size(), target_size);
 
+  // Buffers to hold the new dataset
   std::vector<int> new_image_id;
-  std::vector<float> new_labels;
+  std::vector<int> new_labels;
   std::vector<Image> new_images;
 
-  num_images_per_label = std::vector<int>(labels_names.size(), min_num_images);
-
-  if (min_num_images == 0) return;
-
-  // No need to enforce the distribution if all the labels have the same number of images
-  if (std::all_of(num_images_per_label.begin(), num_images_per_label.end(),
-                  [min_num_images](int x) { return x == min_num_images; }))
-    return;
+  // Number of labels that have yet to reach the target size
+  unsigned int not_done = leftover_per_label.size();
 
   // Rebuild the dataset with the same number of images per label
-  for (int i = 0; i < image_id.size(); i++) {
+  for (unsigned int i = 0; i < image_id.size(); i++) {
     int label = labels[i];
 
-    if (num_images_per_label[label] <= 0) continue;
+    // If the image is part of a label that has already reached the target size, we skip it
+    if (leftover_per_label[label] <= 0) continue;
 
     new_image_id.emplace_back(image_id[i]);
     new_labels.emplace_back(label);
     new_images.emplace_back(std::move(images[i]));
-    num_images_per_label[label]--;
+
+    // Check if all the labels have reached the target size
+    // If true, just break the loop
+    if (leftover_per_label[label] == 1) {
+      not_done--;
+      if (not_done == 0) break;
+    }
+
+    leftover_per_label[label]--;
   }
 
+  // Update the dataset
   image_id = std::move(new_image_id);
   labels = std::move(new_labels);
   images = std::move(new_images);
+
+  return target_size;
 }
 
 size_t Dataset::getSize() const { return images.size(); }
-
 
 std::vector<Image>& Dataset::getImages() { return images; }
 

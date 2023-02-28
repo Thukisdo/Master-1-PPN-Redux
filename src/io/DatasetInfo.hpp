@@ -5,7 +5,7 @@
 #include <vector>
 
 /**
- * @brief Contains information about a dataset, including its size, the label of each image, and
+ * @brief Contains information about a Dataset, including its size, the label of each image, and
  * basic information about each image
  */
 class DatasetInfo {
@@ -68,8 +68,23 @@ public:
   bool isArchive() const { return is_archive; }
 
 private:
+  /**
+   * @brief True if the dataset is an archive, false otherwise
+   */
   bool is_archive = false;
+
+  /**
+   * @brief The root path of the dataset
+   */
   std::filesystem::path dataset_path;
+
+  /**
+   * @brief The name of labels of the dataset
+   */
   std::vector<std::string> labels;
+
+  /**
+   * @brief The ImageInfo associated with each image in the dataset
+   */
   std::vector<ImageInfo> images_info;
 };

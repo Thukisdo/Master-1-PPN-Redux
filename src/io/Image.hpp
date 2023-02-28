@@ -8,12 +8,15 @@
 
 class ImageInfo {
 public:
-  ImageInfo(const std::filesystem::path& image_path, int label_id);
-  int getId() const;
+  ImageInfo(const std::filesystem::path& image_path, int unique_id, int label_id);
+
+  int getLabelId() const;
+  int getUniqueId() const;
   const std::filesystem::path& getPath() const;
 
 private:
   std::filesystem::path image_path;
+  int unique_id = -1;
   int label_id = -1;
 };
 

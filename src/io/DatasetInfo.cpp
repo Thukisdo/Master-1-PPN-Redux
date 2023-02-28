@@ -11,6 +11,8 @@ DatasetInfo::loadFromDirectory(const std::filesystem::path& dataset_path) {
   DatasetInfo res;
   res.dataset_path = dataset_path;
 
+  int current_id = 0;
+
   for (const auto& labels_dir: fs::directory_iterator(dataset_path)) {
     if (not fs::is_directory(labels_dir)) {
       spdlog::warn("Ignoring file {} in dataset directory", labels_dir.path().string());
@@ -25,7 +27,7 @@ DatasetInfo::loadFromDirectory(const std::filesystem::path& dataset_path) {
         spdlog::warn("Ignoring file {} in dataset directory", entry.path().string());
         continue;
       }
-      res.images_info.emplace_back(entry.path(), label_id);
+      res.images_info.emplace_back(entry.path(), current_id++, label_id);
     }
   }
 
@@ -65,7 +67,7 @@ std::optional<DatasetInfo> DatasetInfo::loadFromPath(const std::filesystem::path
 
 
 std::filesystem::path& DatasetInfo::getRootPath() { return dataset_path; }
-const std::filesystem::path& DatasetInfo::getPath() const { return dataset_path; }
+const std::filesystem::path& DatasetInfo::getRootPath() const { return dataset_path; }
 
 std::vector<std::string>& DatasetInfo::getLabels() { return labels; }
 

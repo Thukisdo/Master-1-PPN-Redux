@@ -28,7 +28,8 @@ public:
   explicit Dataset(const DatasetInfo& dataset_info, int begin = 0, int end = -1);
 
   /**
-   * @brief Load a dataset from a DatasetInfo, and split it into two dataset for training and testing
+   * @brief Load a dataset from a DatasetInfo, and split it into two dataset for training and
+   * testing
    * @param info The DatasetInfo associated with the dataset
    * @param split_ratio The proportion of the dataset to use for training
    * @return One dataset for training, and one dataset for testing
@@ -38,8 +39,9 @@ public:
   /**
    * @brief Count the number of images per label, and ensures all the labels have the same number of
    * images. If not, the dataset is resized to have the same number of images per label
+   * @return The number of images per label
    */
-  void enforceEqualLabelDistribution();
+  int enforceEqualLabelDistribution();
 
   /**
    * @return Returns a vector containing the images in the dataset
@@ -70,7 +72,7 @@ private:
   /**
    * @brief contains the labels for each image as a float
    */
-  std::vector<float> labels;
+  std::vector<int> labels;
 
   /**
    * @brief contains the id of each image
