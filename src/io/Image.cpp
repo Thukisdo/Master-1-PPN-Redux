@@ -4,9 +4,9 @@
 #include <stb_image.h>
 #include <stb_image_resize.h>
 
-std::optional<Image> Image::load(const std::filesystem::path& filename, int nchannels) {
+std::optional<Image> Image::load(const std::filesystem::path& path, int nchannels) {
   int width, height, channels;
-  float* pixels = stbi_loadf(filename.string().c_str(), &width, &height, &channels, nchannels);
+  float* pixels = stbi_loadf(path.string().c_str(), &width, &height, &channels, nchannels);
 
   if (pixels == nullptr) { return std::nullopt; }
 
