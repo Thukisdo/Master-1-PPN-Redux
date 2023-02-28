@@ -5,7 +5,7 @@
 #include <string.h>
 
 
-#include "type.h"
+#include "../src/type.h"
 #include "neural_network.h"
 #include "convolution_layer.h"
 #include "dataset_manager.h"

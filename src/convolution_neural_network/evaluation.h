@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "type.h"
+#include "../../src/type.h"
 #include "neural_network.h"
 
 typedef struct {

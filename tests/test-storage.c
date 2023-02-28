@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <cmocka.h>
 
-#include "type.h"
+#include "../src/type.h"
 #include "nn.h"
 #include "store.h"
 

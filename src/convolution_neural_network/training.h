@@ -5,8 +5,8 @@
 #include <stdlib.h>
 
 
-#include "type.h"
-#include "global.h"
+#include "../../src/type.h"
+#include "../../src/global.h"
 
 #include "neural_network.h"
 #include "convolution_layer.h"

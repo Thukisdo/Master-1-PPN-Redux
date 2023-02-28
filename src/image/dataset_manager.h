@@ -11,8 +11,8 @@
 #include "image_io.h"
 
 
-#include "type.h"
-#include "global.h"
+#include "../../src/type.h"
+#include "../../src/global.h"
 
 
 
