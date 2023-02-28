@@ -18,15 +18,22 @@ target_link_libraries(main PRIVATE
         common image convolution_neural_network context
         spdlog::spdlog
         io
-        )
+)
 
 set_target_properties(main PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+include(GNUInstallDirs)
+install(TARGETS main
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
 
 # Test executable for the project
 add_executable(test testing.c)
 target_link_libraries(test PRIVATE common image convolution_neural_network context)
-set_target_properties(test PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set_target_properties(test PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+        EXCLUDE_FROM_ALL TRUE
+)
 
 
 

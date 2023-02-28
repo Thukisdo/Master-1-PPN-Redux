@@ -38,4 +38,4 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(libconfig)
 
-
+add_subdirectory(stb)

@@ -2,15 +2,16 @@
 #include <iostream>
 #include <spdlog/spdlog.h>
 #include "DatasetInfo.hpp"
+#include "Dataset.hpp"
 
 // C headers
 
 extern "C" {
   #include "context.h"
-  #include "dataset_manager.h"
+  // #include "dataset_manager.h"
   #include "neural_network.h"
   #include "store.h"
-  #include "training.h"
+  // #include "training.h"
   #include "type.h"
 }
 
@@ -61,13 +62,16 @@ int main(int argc, char* argv[]) {
   info_context(&context);
 
   // Placeholder
-  auto dataset_info = DatasetInfo::load("../../dataset");
-  auto training_set, testing_set = Dataset::load_and_split(dataset_info, context.test_ratio);
+  auto dataset_info = DatasetInfo::loadFromPath("../../dataset");
+  auto [training_set, testing_set] = Dataset::load_and_split(*dataset_info, 0.1);
 
-  // spdlog::info("Training set size: {}", training_set.size());
-  // spdlog::info("Testing set size: {}", testing_set.size());
+  spdlog::info("Training set size: {}", training_set.getSize());
+  spdlog::info("Testing set size: {}", testing_set.getSize());
+
+  training_set.enforceEqualLabelDistributionn();
 
   exit(1);
+  /*
 
   srand(time(NULL));
 
@@ -129,4 +133,5 @@ int main(int argc, char* argv[]) {
   free_dataset(&train_dataset);
   free_dataset(&test_dataset);
   free_context(&context);
+   */
 }
