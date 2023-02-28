@@ -19,7 +19,10 @@ namespace {
   }
 
   std::pair<std::vector<Image>, std::vector<int>>
-  load_image_in_range(const DatasetInfo& info, unsigned int begin, unsigned int end) {
+  load_image_in_range(const DatasetInfo& info, unsigned int begin, unsigned int end,
+                      int max_per_label, int nlabel) {
+
+    std::vector<int> label_count(nlabel, 0);
 
     std::vector<Image> image_buffer(end - begin);
     std::vector<int> image_ids(end - begin);
@@ -28,9 +31,11 @@ namespace {
 
     // Load the images in parallel, but store them in a temporary buffer
     // So we can remove the images that failed to load
-#pragma omp parallel for default(none) schedule(dynamic) reduction(+ : errors) firstprivate(begin, end) shared(image_buffer, image_ids, info)
     for (unsigned int i = begin; i < end; i++) {
       const ImageInfo& curr_info = info.getImagesInfo()[i];
+
+      if (max_per_label > 0 and label_count[curr_info.getLabelId()] >= max_per_label) { continue; }
+
       auto loaded_image = Image::load(curr_info.getPath(), 1);
 
       if (not loaded_image) {
@@ -40,6 +45,9 @@ namespace {
 
       image_buffer[i - begin] = std::move(*loaded_image);
       image_ids[i - begin] = curr_info.getUniqueId();
+
+      // Atomically increase the counter for the current label
+      label_count[curr_info.getLabelId()]++;
     }
 
 
@@ -92,11 +100,11 @@ namespace {
    * @return 0 if all labels contain the same number of images, otherwise the number of images in
    * the label with the least number of images
    */
-  int find_smallest_label_if_different(unsigned int nlabel, const std::vector<int>& labels) {
+  int find_smallest_label_if_different(unsigned int nlabel, const std::vector<ImageInfo>& infos) {
 
     std::vector<int> num_images_per_label(nlabel, 0);
 
-    for (int label: labels) { num_images_per_label[static_cast<int>(label)]++; }
+    for (const auto& img: infos) { num_images_per_label[img.getLabelId()]++; }
 
     int min_num_images =
             *std::min_element(num_images_per_label.begin(), num_images_per_label.end());
@@ -111,7 +119,8 @@ namespace {
 
 }// namespace
 
-Dataset::Dataset(const DatasetInfo& info, unsigned int begin, unsigned int end) {
+Dataset::Dataset(const DatasetInfo& info, unsigned int begin, unsigned int end,
+                 bool enforce_equal_distribution) {
 
 
   if (end == 0) { end = info.getImagesInfo().size(); }
@@ -121,7 +130,14 @@ Dataset::Dataset(const DatasetInfo& info, unsigned int begin, unsigned int end) 
     return;
   }
 
-  auto [image_buffer, image_ids] = load_image_in_range(info, begin, end);
+  int max_per_label = 0;
+
+  if (enforce_equal_distribution) {
+    max_per_label = find_smallest_label_if_different(info.getLabels().size(), info.getImagesInfo());
+  }
+
+  auto [image_buffer, image_ids] =
+          load_image_in_range(info, begin, end, max_per_label, info.getLabels().size());
   const auto& images_info = info.getImagesInfo();
 
   // Remove the images that failed to load and create the final dataset
@@ -140,7 +156,8 @@ Dataset::Dataset(const DatasetInfo& info, unsigned int begin, unsigned int end) 
   labels_names = info.getLabels();
 }
 
-std::pair<Dataset, Dataset> Dataset::load_and_split(const DatasetInfo& info, float split_ratio) {
+std::pair<Dataset, Dataset> Dataset::load_and_split(const DatasetInfo& info, float split_ratio,
+                                                    bool enforce_equal_distribution) {
   std::vector<int> image_ids;
   for (const auto& image_info: info.getImagesInfo()) {
     image_ids.push_back(image_info.getUniqueId());
@@ -153,56 +170,11 @@ std::pair<Dataset, Dataset> Dataset::load_and_split(const DatasetInfo& info, flo
   unsigned int split_index = (int) ((float) image_ids.size() * split_ratio);
 
   Dataset test_set(info, 0, split_index);
-  Dataset train_set(info, split_index, image_ids.size());
+  Dataset train_set(info, split_index, image_ids.size(), enforce_equal_distribution);
 
   resize_to_max_dim(test_set, train_set);
 
   return {std::move(train_set), std::move(test_set)};
-}
-
-int Dataset::enforceEqualLabelDistribution() {
-  int target_size = find_smallest_label_if_different(labels_names.size(), labels);
-
-  if (target_size == 0) return 0;
-
-  // Number of images left to pick per label to reach the target size
-  std::vector<int> leftover_per_label(labels_names.size(), target_size);
-
-  // Buffers to hold the new dataset
-  std::vector<int> new_image_id;
-  std::vector<int> new_labels;
-  std::vector<Image> new_images;
-
-  // Number of labels that have yet to reach the target size
-  unsigned int not_done = leftover_per_label.size();
-
-  // Rebuild the dataset with the same number of images per label
-  for (unsigned int i = 0; i < image_id.size(); i++) {
-    int label = labels[i];
-
-    // If the image is part of a label that has already reached the target size, we skip it
-    if (leftover_per_label[label] <= 0) continue;
-
-    new_image_id.emplace_back(image_id[i]);
-    new_labels.emplace_back(label);
-    new_images.emplace_back(std::move(images[i]));
-
-    // Check if all the labels have reached the target size
-    // If true, just break the loop
-    if (leftover_per_label[label] == 1) {
-      not_done--;
-      if (not_done == 0) break;
-    }
-
-    leftover_per_label[label]--;
-  }
-
-  // Update the dataset
-  image_id = std::move(new_image_id);
-  labels = std::move(new_labels);
-  images = std::move(new_images);
-
-  return target_size;
 }
 
 size_t Dataset::getSize() const { return images.size(); }

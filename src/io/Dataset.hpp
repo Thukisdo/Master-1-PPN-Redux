@@ -23,25 +23,24 @@ public:
    * @param dataset_info The DatasetInfo associated with the dataset
    * @param begin The starting index of the images to load
    * @param end The starting index of the images to load. If 0, load all the images from begin to
+   * @param enforce_equal_distribution If true, the dataset is resized to have the same number of
+   * images per label
    * the end of the dataset
    */
-  explicit Dataset(const DatasetInfo& dataset_info, unsigned int begin = 0, unsigned int end = 0);
+  explicit Dataset(const DatasetInfo& dataset_info, unsigned int begin = 0, unsigned int end = 0,
+                   bool enforce_equal_distribution = false);
 
   /**
    * @brief Load a dataset from a DatasetInfo, and split it into two dataset for training and
    * testing
    * @param info The DatasetInfo associated with the dataset
    * @param split_ratio The proportion of the dataset to use for training
-   * @return One dataset for training, and one dataset for testing
+   * @param enforce_equal_distribution If true, the dataset is resized to have the same number of
+   * images per label
+   * @return One dataset for training, and one dataset for testing, in this order
    */
-  static std::pair<Dataset, Dataset> load_and_split(const DatasetInfo& info, float split_ratio);
-
-  /**
-   * @brief Count the number of images per label, and ensures all the labels have the same number of
-   * images. If not, the dataset is resized to have the same number of images per label
-   * @return The number of images per label
-   */
-  int enforceEqualLabelDistribution();
+  static std::pair<Dataset, Dataset> load_and_split(const DatasetInfo& info, float split_ratio,
+                                                    bool enforce_equal_distribution = false);
 
   /**
    * @return Returns a vector containing the images in the dataset

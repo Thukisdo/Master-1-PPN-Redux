@@ -63,16 +63,10 @@ int main(int argc, char* argv[]) {
 
   // Placeholder
   auto dataset_info = DatasetInfo::loadFromPath("../../dataset");
-  auto [training_set, testing_set] = Dataset::load_and_split(*dataset_info, 0.1);
+  auto [training_set, testing_set] = Dataset::load_and_split(*dataset_info, 0.1, true);
 
   spdlog::info("Training set size: {}", training_set.getSize());
   spdlog::info("Testing set size: {}", testing_set.getSize());
-
-  training_set.enforceEqualLabelDistribution();
-
-  spdlog::info("Training set size: {}", training_set.getSize());
-  spdlog::info("Testing set size: {}", testing_set.getSize());
-
 
   exit(1);
   /*
